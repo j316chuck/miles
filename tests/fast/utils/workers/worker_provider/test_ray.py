@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
 
+from miles.utils.workers.worker_provider.base import CellInfo
 from miles.utils.workers.worker_provider.ray import RayWorkerProvider
 from miles.utils.workers.worker_spec import HostAndPort
 
@@ -63,7 +66,7 @@ class TestRayWorkerProviderAddressLookup:
             {"primary": HostAndPort(host="10.0.0.7", port=15000)},
             {"primary": HostAndPort(host="10.0.0.7", port=15001)},
         )
-        provider = RayWorkerProvider(worker_manager_handle=handle)
+        provider = RayWorkerProvider(worker_manager_handle=handle, spec_names=["inference-engine-0-0"])
 
         first = (await provider.get_addrs(worker_name="router-0-0"))["primary"]
         second = (await provider.get_addrs(worker_name="router-0-0"))["primary"]
@@ -80,7 +83,7 @@ class TestRayWorkerProviderGetAddrs:
             "disaggregation_bootstrap": HostAndPort(host="10.0.0.7", port=15001),
         }
         handle = _make_handle(addrs)
-        provider = RayWorkerProvider(worker_manager_handle=handle)
+        provider = RayWorkerProvider(worker_manager_handle=handle, spec_names=["inference-engine-0-0"])
 
         assert await provider.get_addrs(worker_name="engine-0-0") == addrs
 

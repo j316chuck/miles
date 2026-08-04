@@ -15,6 +15,8 @@ from miles.utils.ray_utils import compute_ray_pin_head_options
 from miles.utils.workers.addr_allocator import PortAllocator
 from miles.utils.workers.command_actor import CommandActor
 from miles.utils.workers.naming import compute_cell_id, compute_worker_name
+from miles.utils.workers.ray_worker_handle import RayWorkerHandle
+from miles.utils.workers.worker_handle import BaseWorkerHandle
 from miles.utils.workers.worker_provider.base import CellInfo
 from miles.utils.workers.worker_spec import (
     BaseWorkerSpec,
@@ -43,7 +45,7 @@ class WorkerInfo:
     generation: int
     self_addrs: NamedHostAndPorts
     gpu_ids: list[int]
-    actor_handle: ray.actor.ActorHandle
+    handle: BaseWorkerHandle
 
 
 class RayWorkerManager:
@@ -108,7 +110,7 @@ class RayWorkerManager:
                 generation=actor.generation,
                 self_addrs=actor.self_addrs,
                 gpu_ids=actor.gpu_ids,
-                actor_handle=actor.actor_handle,
+                handle=RayWorkerHandle(actor.actor_handle),
             )
             for actor in cell.actors
         ]

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 from tests.fast.ray.rollout.conftest import make_args
 
@@ -62,15 +60,11 @@ class TestWaitRouterReady:
 
         waited: list[tuple[str, int]] = []
         monkeypatch.setattr(
-            "miles.ray.rollout.router_manager.RayWorkerProvider",
-            SimpleNamespace(create=lambda: _FakeProvider()),
-        )
-        monkeypatch.setattr(
             "miles.ray.rollout.router_manager.wait_tcp_ready",
             lambda host, port, timeout: waited.append((host, port)),
         )
 
-        addr = await wait_router_ready(model_idx=1)
+        addr = await wait_router_ready(model_idx=1, provider=_FakeProvider())
 
         assert requested == ["inference-router-1-0-0"]
         assert waited == [("10.0.0.9", 12345)]
@@ -81,13 +75,13 @@ class TestWaitSessionServerReady:
     async def test_disabled_returns_silently(self):
         """Happy no-op: ``use_session_server=False`` returns without touching any other config."""
         args = make_args(use_session_server=False)
-        await wait_session_server_ready(args)
+        await wait_session_server_ready(args, provider=None)
 
     async def test_enabled_without_hf_checkpoint_raises(self):
         """Enabling the session server without a tokenizer source fails fast."""
         args = make_args(use_session_server=True, hf_checkpoint=None)
         with pytest.raises(ValueError, match="hf-checkpoint"):
-            await wait_session_server_ready(args)
+            await wait_session_server_ready(args, provider=None)
 
     async def test_publishes_the_manager_addrs_and_instance_ids(self, monkeypatch):
         """The driver-side contract (ip, ports, instance ids) comes from the worker manager addrs."""
@@ -100,10 +94,6 @@ class TestWaitSessionServerReady:
 
         waited: list[tuple[str, int]] = []
         monkeypatch.setattr(
-            "miles.ray.rollout.router_manager.RayWorkerProvider",
-            SimpleNamespace(create=lambda: _FakeProvider()),
-        )
-        monkeypatch.setattr(
             "miles.ray.rollout.router_manager.wait_tcp_ready",
             lambda host, port, timeout: waited.append((host, port)),
         )
@@ -114,7 +104,7 @@ class TestWaitSessionServerReady:
             num_session_servers=2,
             run_uuid="00112233445566aa",
         )
-        await wait_session_server_ready(args)
+        await wait_session_server_ready(args, provider=_FakeProvider())
 
         assert requested == ["session-server-0-0", "session-server-1-0"]
         assert args.session_server_addrs == ["10.0.0.9:5005", "10.0.0.9:5006"]
@@ -138,10 +128,6 @@ class TestWaitSessionServerReady:
 
         waited: list[tuple[str, int]] = []
         monkeypatch.setattr(
-            "miles.ray.rollout.router_manager.RayWorkerProvider",
-            SimpleNamespace(create=lambda: _FakeProvider()),
-        )
-        monkeypatch.setattr(
             "miles.ray.rollout.router_manager.wait_tcp_ready",
             lambda host, port, timeout: waited.append((host, port)),
         )
@@ -152,7 +138,7 @@ class TestWaitSessionServerReady:
             num_session_servers=2,
             run_uuid="00112233445566aa",
         )
-        await wait_session_server_ready(args)
+        await wait_session_server_ready(args, provider=_FakeProvider())
 
         assert args.session_server_addrs == ["10.0.0.1:5005", "10.0.0.2:5005"]
         assert args.session_server_instance_ids == {

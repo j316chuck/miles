@@ -50,7 +50,7 @@ def render_cli_argv(
     def parse(argv: list[str]) -> _ArgsT:
         return from_parsed(make_parser().parse_args(argv))
 
-    baseline_argv = [token for name in baseline_fields for token in render(name, wanted_values[name])]
+    baseline_argv = [token for name in baseline_fields for token in render(name, getattr(wanted_obj, name))]
     cli_defaults = parse(baseline_argv)
 
     argv = list(baseline_argv)

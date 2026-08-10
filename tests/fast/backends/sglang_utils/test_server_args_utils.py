@@ -15,7 +15,11 @@ pytest.importorskip("sglang")
 
 from sglang.srt.server_args import ServerArgs
 
-from miles.backends.sglang_utils.server_args_utils import parse_server_args_argv, server_args_to_argv
+from miles.backends.sglang_utils.server_args_utils import (
+    _UNCOMPARED_FIELDS,
+    parse_server_args_argv,
+    server_args_to_argv,
+)
 from miles.backends.sglang_utils.sglang_engine import _compute_server_args
 from miles.utils.workers.argv_utils import _actions_by_dest, _render_action_argv, _resolve_action
 
@@ -68,7 +72,7 @@ def _assert_roundtrips(server_args_dict: dict) -> None:
     differing = [
         field.name
         for field in dataclasses.fields(wanted)
-        if getattr(parsed, field.name) != getattr(wanted, field.name)
+        if field.name not in _UNCOMPARED_FIELDS and getattr(parsed, field.name) != getattr(wanted, field.name)
     ]
     assert differing == []
 

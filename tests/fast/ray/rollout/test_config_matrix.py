@@ -87,6 +87,7 @@ class TestServerGroupValidation:
                 rollout_num_gpus=8,
             )
 
+    @pytest.mark.parametrize("wt", ["regular", "prefill", "decode", "placeholder"])
     def test_all_valid_worker_types_accepted(self, wt, tmp_path):
         """Every documented worker_type parses through the yaml path."""
         cfg = _resolve_yaml(

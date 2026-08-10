@@ -239,6 +239,18 @@ class TestRenderCliArgv:
         )
         assert argv == []
 
+    def test_requested_derived_fields_missing_from_constructor_inputs_are_rendered(self):
+        """Requested derived values survive even when the raw input mapping omitted them."""
+        args_obj = _make_cli_default_args(count=3)
+        argv = render_cli_argv(
+            {},
+            wanted_obj=args_obj,
+            make_parser=_make_parser,
+            from_parsed=_from_parsed,
+            derived_fields=("count",),
+        )
+        assert argv == ["--count", "3"]
+
     def test_unrenderable_false_on_a_true_default_flag_fails_loudly(self):
         """A store-true flag whose CLI default is True cannot express False."""
         with pytest.raises(AssertionError, match="cannot be rendered"):

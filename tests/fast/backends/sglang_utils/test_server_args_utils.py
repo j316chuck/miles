@@ -84,9 +84,9 @@ class TestServerArgsToArgv:
         _assert_roundtrips(server_args)
 
     def test_the_identity_flags_are_always_rendered_exactly_once(self):
-        """model path and addressing must be explicit on the command, even at CLI defaults."""
+        """Model path, addressing, and device must stay explicit even at CLI defaults."""
         argv = server_args_to_argv(_server_args())
-        for flag in ("--model-path", "--host", "--port"):
+        for flag in ("--model-path", "--host", "--port", "--device"):
             assert argv.count(flag) == 1
 
     def test_a_prefill_worker_roundtrips(self):

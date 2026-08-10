@@ -4,7 +4,7 @@ from sglang.srt.server_args import ServerArgs
 
 from miles.utils.workers.argv_utils import render_cli_argv
 
-_BASELINE_FIELDS = ("model_path", "host", "port", "disaggregation_mode", "device")
+_BASELINE_FIELDS = ("trust_remote_code", "model_path", "host", "port", "disaggregation_mode", "device")
 
 _UNCOMPARED_FIELDS = frozenset({"random_seed"})
 

@@ -54,7 +54,8 @@ def render_cli_argv(
     cli_defaults = parse(baseline_argv)
 
     argv = list(baseline_argv)
-    for name, value in wanted_values.items():
+    for name in wanted_values:
+        value = getattr(wanted_obj, name)
         if name in baseline_fields or value == getattr(cli_defaults, name):
             continue
         argv.extend(render(name, value))

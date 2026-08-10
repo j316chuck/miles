@@ -228,6 +228,17 @@ class TestRenderCliArgv:
         argv = _render(_make_cli_default_args(count=3))
         assert "--cli-filled" not in argv
 
+    def test_constructor_normalized_values_are_rendered_from_the_wanted_object(self):
+        """Raw constructor inputs cannot override their normalized target values."""
+        args_obj = _parse([])
+        argv = render_cli_argv(
+            {"items": None},
+            wanted_obj=args_obj,
+            make_parser=_make_parser,
+            from_parsed=_from_parsed,
+        )
+        assert argv == []
+
     def test_unrenderable_false_on_a_true_default_flag_fails_loudly(self):
         """A store-true flag whose CLI default is True cannot express False."""
         with pytest.raises(AssertionError, match="cannot be rendered"):

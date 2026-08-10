@@ -106,6 +106,11 @@ class TestConfigToArgv:
             save_debug_trajectory_data=None,
             lora_rank=0,
             lora_adapter_path=None,
+            use_session_server="v2",
+            session_sample_picker_path="miles.rollout.session.v2.picker_hub.drop_retries",
+            session_sample_postprocessor_path=(
+                "miles.rollout.session.v2.postprocessor_hub.default_postprocess"
+            ),
         )
         assert parse_config_argv(SessionServerConfig, config_to_argv(session_config)) == session_config
 

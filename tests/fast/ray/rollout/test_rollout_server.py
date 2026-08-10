@@ -34,7 +34,7 @@ class TestRolloutServerPureFunctions:
     def test_eval_fleet_inherits_rollout_engine_settings(self):
         """The eval model carries only what makes it an eval fleet; the rest is inherited."""
         args = make_args(eval_num_gpus=2, eval_num_gpus_per_engine=2)
-        config = _resolve_sglang_config(args)
+        config = resolve_sglang_config(args)
 
         [eval_model] = [m for m in config.models if m.name == "eval"]
         assert eval_model.update_weights is False
@@ -45,13 +45,12 @@ class TestRolloutServerPureFunctions:
         assert group.overrides["enable_return_indexer_topk"] is False
 
         # The fleet boots on --hf-checkpoint; every eval overwrites those weights anyway.
-        eval_model.resolve(args)
-        assert group.overrides["model_path"] == args.hf_checkpoint
+        assert group.model_path == args.hf_checkpoint
 
     def test_tp_coupled_sizes_are_not_inherited_across_a_different_eval_tp(self):
         """Inheriting these across a different eval tp gives an engine that will not boot."""
         args = make_args(rollout_num_gpus_per_engine=8, eval_num_gpus=1, eval_num_gpus_per_engine=1)
-        [group] = [m for m in _resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
+        [group] = [m for m in resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
 
         assert {k: group.overrides[k] for k in ("dp_size", "pp_size", "ep_size", "attn_cp_size")} == dict.fromkeys(
             ("dp_size", "pp_size", "ep_size", "attn_cp_size"), 1
@@ -59,7 +58,7 @@ class TestRolloutServerPureFunctions:
 
     def test_tp_coupled_sizes_are_inherited_when_the_tp_matches(self):
         args = make_args(rollout_num_gpus_per_engine=2, eval_num_gpus=2, eval_num_gpus_per_engine=2)
-        [group] = [m for m in _resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
+        [group] = [m for m in resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
 
         assert "ep_size" not in group.overrides  # left to the shared --sglang-* fill-in
 
@@ -70,17 +69,17 @@ class TestRolloutServerPureFunctions:
             eval_num_gpus_per_engine=2,
             eval_sglang_ep_size=2,
         )
-        [group] = [m for m in _resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
+        [group] = [m for m in resolve_sglang_config(args).models if m.name == "eval"][0].server_groups
 
         assert group.overrides["ep_size"] == 2
 
     def test_eval_sglang_overrides_reach_the_eval_group_only(self):
         args = make_args(eval_num_gpus=2, eval_sglang_mem_fraction_static=0.95)
-        config = _resolve_sglang_config(args)
+        config = resolve_sglang_config(args)
 
         by_name = {m.name: m for m in config.models}
         assert by_name["eval"].server_groups[0].overrides["mem_fraction_static"] == 0.95
-        assert by_name["default"].server_groups[0].overrides == {}
+        assert "mem_fraction_static" not in by_name["default"].server_groups[0].overrides
 
     def test_yaml_eval_model_is_filled_from_cli_without_clobbering(self, tmp_path):
         """Anything the YAML leaves unset falls through to the eval CLI args."""
@@ -104,7 +103,7 @@ class TestRolloutServerPureFunctions:
             eval_num_gpus_per_engine=2,
             eval_sglang_mem_fraction_static=0.95,
         )
-        config = _resolve_sglang_config(args)
+        config = resolve_sglang_config(args)
 
         [eval_model] = [m for m in config.models if m.name == "eval"]
         # Auto-inference would give True here and put the fleet in the broadcast group.
@@ -132,34 +131,27 @@ class TestRolloutServerPureFunctions:
         args = make_args(
             sglang_config=str(cfg_path), rollout_num_gpus=8, eval_num_gpus=2, eval_sglang_mem_fraction_static=0.95
         )
-        config = _resolve_sglang_config(args)
+        config = resolve_sglang_config(args)
 
         [eval_model] = [m for m in config.models if m.name == "eval"]
         assert eval_model.server_groups[0].overrides["mem_fraction_static"] == 0.5
 
-    async def test_probe_and_mark_dead(self, monkeypatch):
+    async def test_probe_and_mark_dead(self) -> None:
         """recover() only restarts engines already marked stopped, so something has to mark them."""
-        import miles.ray.rollout.rollout_server as rollout_server_mod
-
-        monkeypatch.setattr(rollout_server_mod.ray, "kill", lambda handle: None)
-
-        class _Engine:
-            def __init__(self, alive):
+        class _Cell:
+            def __init__(self, alive: bool) -> None:
                 self.is_allocated, self._alive = True, alive
 
-            @property
-            def actor_handle(self):
-                async def probe():
-                    if not self._alive:
-                        raise RuntimeError("actor died")
+            async def probe_and_mark_dead(self) -> None:
+                if not self._alive:
+                    self.is_allocated = False
 
-                return SimpleNamespace(get_weight_version=SimpleNamespace(remote=probe))
-
-            def mark_stopped(self):
-                self.is_allocated = False
-
-        alive, dead = _Engine(True), _Engine(False)
-        srv = RolloutServer(server_groups=[SimpleNamespace(all_engines=[alive, dead])])
+        alive, dead = _Cell(True), _Cell(False)
+        srv = RolloutServer(
+            server_cells={"alive": alive, "dead": dead},
+            args=SimpleNamespace(),
+            context_lock=ContextLock("test"),
+        )
 
         await srv.probe_and_mark_dead()
 

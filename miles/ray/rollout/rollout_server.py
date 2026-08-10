@@ -105,6 +105,7 @@ class RolloutServer:
     def _cells_by_gpu_offset(self) -> list[ServerCell]:
         return sorted(self.server_cells.values(), key=lambda cell: cell.meta.gpu_offset)
 
+    @lock_exempt
     async def probe_and_mark_dead(self):
         """Mark unreachable cells stopped so ``recover`` restarts them.
 

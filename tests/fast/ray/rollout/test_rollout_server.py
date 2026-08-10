@@ -138,6 +138,7 @@ class TestRolloutServerPureFunctions:
 
     async def test_probe_and_mark_dead(self) -> None:
         """recover() only restarts engines already marked stopped, so something has to mark them."""
+
         class _Cell:
             def __init__(self, alive: bool) -> None:
                 self.is_allocated, self._alive = True, alive

@@ -331,3 +331,40 @@ class TestConfigureSglang:
             await dumper_utils.configure_sglang(self._make_args(tmp_path))
 
         assert posted == ["http://a:1/dumper/configure", "http://b:2/dumper/configure"]
+
+    @pytest.mark.asyncio
+    async def test_an_empty_router_roster_is_waited_out(self, tmp_path: Path) -> None:
+        """Engines registering after rollout startup still receive dumper configuration."""
+        posted: list[str] = []
+
+        async def _post(url, body):
+            posted.append(url)
+
+        get_worker_urls = AsyncMock(side_effect=[[], [], ["http://a:1"]])
+
+        with (
+            patch(
+                "miles.rollout.inference_rollout.inference_rollout_train.get_worker_urls",
+                new=get_worker_urls,
+            ),
+            patch("miles.utils.http_utils.post", new=_post),
+            patch("miles.utils.dumper_utils._cleanup_dump_dir"),
+        ):
+            await dumper_utils.configure_sglang(self._make_args(tmp_path))
+
+        assert get_worker_urls.await_count == 3
+        assert posted == ["http://a:1/dumper/configure"]
+
+    @pytest.mark.asyncio
+    async def test_a_roster_that_never_fills_fails_loudly(self, tmp_path: Path) -> None:
+        """An empty router roster eventually reports the missing inference engine."""
+        with (
+            patch(
+                "miles.rollout.inference_rollout.inference_rollout_train.get_worker_urls",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch("miles.utils.dumper_utils._cleanup_dump_dir"),
+            patch("miles.utils.dumper_utils._WORKER_REGISTRATION_TIMEOUT_SECONDS", 0.05),
+            pytest.raises(AssertionError, match="no inference engine"),
+        ):
+            await dumper_utils.configure_sglang(self._make_args(tmp_path))

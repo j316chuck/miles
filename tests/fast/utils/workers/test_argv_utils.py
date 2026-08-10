@@ -241,6 +241,7 @@ class TestRenderCliArgv:
 
     def test_constructor_values_are_rendered_before_post_parse_normalization(self):
         """Raw values are not normalized twice when from_parsed rewrites them."""
+
         def from_parsed(parsed: argparse.Namespace) -> _DemoArgs:
             args_obj = _from_parsed(parsed)
             if args_obj.verbose:

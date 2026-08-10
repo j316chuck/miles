@@ -83,9 +83,14 @@ async def configure_sglang(args: Namespace) -> None:
 async def _wait_registered_worker_urls(args: Namespace) -> list[str]:
     from miles.rollout.inference_rollout.inference_rollout_train import get_worker_urls
 
+    expected_worker_count = _expected_registered_worker_count(args)
+    assert expected_worker_count > 0, "dumper requires at least one configured inference engine"
+
     async def _attempt(_remaining_seconds: float) -> list[str]:
         worker_urls = await get_worker_urls(args)
-        assert worker_urls, "router reports no inference engine to configure the dumper on"
+        assert len(worker_urls) >= expected_worker_count, (
+            f"router reports {len(worker_urls)}/{expected_worker_count} inference engines to configure the dumper on"
+        )
         return worker_urls
 
     return await retry_until_deadline(
@@ -93,6 +98,17 @@ async def _wait_registered_worker_urls(args: Namespace) -> list[str]:
         total_seconds=_WORKER_REGISTRATION_TIMEOUT_SECONDS,
         retry_on=AssertionError,
         log_fields=dict(op="dumper_wait_workers"),
+    )
+
+
+def _expected_registered_worker_count(args: Namespace) -> int:
+    from miles.backends.sglang_utils.sglang_config import resolve_sglang_config
+
+    model_config = resolve_sglang_config(args).models[0]
+    return sum(
+        group.num_gpus // group.num_gpus_per_engine
+        for group in model_config.server_groups
+        if group.worker_type != "placeholder"
     )
 
 

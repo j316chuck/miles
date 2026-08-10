@@ -38,7 +38,6 @@ def render_cli_argv(
     make_parser: Callable[[], argparse.ArgumentParser],
     from_parsed: Callable[[argparse.Namespace], _ArgsT],
     baseline_fields: Sequence[str] = (),
-    derived_fields: Sequence[str] = (),
     field_to_dest: Mapping[str, str] | None = None,
     uncompared_fields: frozenset[str] = frozenset(),
 ) -> list[str]:
@@ -55,13 +54,8 @@ def render_cli_argv(
     cli_defaults = parse(baseline_argv)
 
     argv = list(baseline_argv)
-    field_names = [
-        *wanted_values,
-        *(name for name in derived_fields if name not in wanted_values),
-    ]
-    for name in field_names:
-        value = getattr(wanted_obj, name)
-        if name in baseline_fields or value == getattr(cli_defaults, name):
+    for name, value in wanted_values.items():
+        if name in baseline_fields or value is None or getattr(wanted_obj, name) == getattr(cli_defaults, name):
             continue
         argv.extend(render(name, value))
 

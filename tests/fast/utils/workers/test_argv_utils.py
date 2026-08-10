@@ -228,8 +228,8 @@ class TestRenderCliArgv:
         argv = _render(_make_cli_default_args(count=3))
         assert "--cli-filled" not in argv
 
-    def test_constructor_normalized_values_are_rendered_from_the_wanted_object(self):
-        """Raw constructor inputs cannot override their normalized target values."""
+    def test_none_constructor_inputs_are_left_for_the_cli_to_normalize(self):
+        """A nullable input can normalize to a collection without being rendered."""
         args_obj = _parse([])
         argv = render_cli_argv(
             {"items": None},
@@ -239,17 +239,24 @@ class TestRenderCliArgv:
         )
         assert argv == []
 
-    def test_requested_derived_fields_missing_from_constructor_inputs_are_rendered(self):
-        """Requested derived values survive even when the raw input mapping omitted them."""
-        args_obj = _make_cli_default_args(count=3)
+    def test_constructor_values_are_rendered_before_post_parse_normalization(self):
+        """Raw values are not normalized twice when from_parsed rewrites them."""
+        def from_parsed(parsed: argparse.Namespace) -> _DemoArgs:
+            args_obj = _from_parsed(parsed)
+            if args_obj.verbose:
+                args_obj.count //= 2
+            return args_obj
+
+        wanted_values = {**dataclass_to_values(_make_cli_default_args(verbose=True)), "count": 6}
+        args_obj = from_parsed(_make_parser().parse_args(["--verbose", "--count", "6"]))
         argv = render_cli_argv(
-            {},
+            wanted_values,
             wanted_obj=args_obj,
             make_parser=_make_parser,
-            from_parsed=_from_parsed,
-            derived_fields=("count",),
+            from_parsed=from_parsed,
         )
-        assert argv == ["--count", "3"]
+        assert _make_parser().parse_args(argv).count == 6
+        assert from_parsed(_make_parser().parse_args(argv)) == args_obj
 
     def test_unrenderable_false_on_a_true_default_flag_fails_loudly(self):
         """A store-true flag whose CLI default is True cannot express False."""

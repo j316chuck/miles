@@ -54,12 +54,28 @@ def render_cli_argv(
     cli_defaults = parse(baseline_argv)
 
     argv = list(baseline_argv)
+    rendered_fields = set(baseline_fields)
     for name, value in wanted_values.items():
         if name in baseline_fields or value is None or getattr(wanted_obj, name) == getattr(cli_defaults, name):
             continue
         argv.extend(render(name, value))
+        rendered_fields.add(name)
 
-    mismatch = _describe_mismatch(parse(argv), wanted_obj, uncompared_fields=uncompared_fields)
+    parsed = parse(argv)
+    while mismatched_fields := [
+        name
+        for name, value in wanted_values.items()
+        if name not in rendered_fields
+        and name not in uncompared_fields
+        and value is not None
+        and getattr(parsed, name) != getattr(wanted_obj, name)
+    ]:
+        for name in mismatched_fields:
+            argv.extend(render(name, wanted_values[name]))
+            rendered_fields.add(name)
+        parsed = parse(argv)
+
+    mismatch = _describe_mismatch(parsed, wanted_obj, uncompared_fields=uncompared_fields)
     assert not mismatch, f"cli argv roundtrip mismatch on {mismatch}"
     return argv
 

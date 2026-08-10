@@ -259,6 +259,26 @@ class TestRenderCliArgv:
         assert _make_parser().parse_args(argv).count == 6
         assert from_parsed(_make_parser().parse_args(argv)) == args_obj
 
+    def test_explicit_value_is_restored_when_another_flag_changes_its_default(self):
+        """A skipped model-derived default is emitted if another explicit flag changes it."""
+
+        def from_parsed(parsed: argparse.Namespace) -> _DemoArgs:
+            args_obj = _from_parsed(parsed)
+            if args_obj.ratio == 1.0:
+                args_obj.count = 3
+            return args_obj
+
+        wanted_values = {**dataclass_to_values(_make_cli_default_args(count=3)), "ratio": 0.5}
+        args_obj = from_parsed(_make_parser().parse_args(["--count", "3", "--ratio", "0.5"]))
+        argv = render_cli_argv(
+            wanted_values,
+            wanted_obj=args_obj,
+            make_parser=_make_parser,
+            from_parsed=from_parsed,
+        )
+        assert argv == ["--ratio", "0.5", "--count", "3"]
+        assert from_parsed(_make_parser().parse_args(argv)) == args_obj
+
     def test_default_store_true_value_is_expressed_by_omitting_the_flag(self):
         """A default False remains implicit when other inputs change its resolved baseline."""
 

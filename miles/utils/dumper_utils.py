@@ -88,9 +88,9 @@ async def _wait_registered_worker_urls(args: Namespace) -> list[str]:
 
     async def _attempt(_remaining_seconds: float) -> list[str]:
         worker_urls = await get_worker_urls(args)
-        assert len(worker_urls) >= expected_worker_count, (
-            f"router reports {len(worker_urls)}/{expected_worker_count} inference engines to configure the dumper on"
-        )
+        assert (
+            len(worker_urls) >= expected_worker_count
+        ), f"router reports {len(worker_urls)}/{expected_worker_count} inference engines to configure the dumper on"
         return worker_urls
 
     return await retry_until_deadline(

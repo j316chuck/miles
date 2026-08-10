@@ -259,6 +259,25 @@ class TestRenderCliArgv:
         assert _make_parser().parse_args(argv).count == 6
         assert from_parsed(_make_parser().parse_args(argv)) == args_obj
 
+    def test_default_store_true_value_is_expressed_by_omitting_the_flag(self):
+        """A default False remains implicit when other inputs change its resolved baseline."""
+
+        def from_parsed(parsed: argparse.Namespace) -> _DemoArgs:
+            args_obj = _from_parsed(parsed)
+            args_obj.verbose = args_obj.count == 0
+            return args_obj
+
+        wanted_values = dataclass_to_values(_make_cli_default_args(count=1))
+        args_obj = from_parsed(_make_parser().parse_args(["--count", "1"]))
+        argv = render_cli_argv(
+            wanted_values,
+            wanted_obj=args_obj,
+            make_parser=_make_parser,
+            from_parsed=from_parsed,
+        )
+        assert "--verbose" not in argv
+        assert from_parsed(_make_parser().parse_args(argv)) == args_obj
+
     def test_unrenderable_false_on_a_true_default_flag_fails_loudly(self):
         """A store-true flag whose CLI default is True cannot express False."""
         with pytest.raises(AssertionError, match="cannot be rendered"):

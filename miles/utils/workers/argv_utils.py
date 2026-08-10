@@ -101,6 +101,8 @@ def _render_action_argv(action: argparse.Action, value: object) -> list[str]:
         return [_boolean_option_string(action, value=bool(value))]
 
     if action.nargs == 0:
+        if value == action.default:
+            return []
         flag = _long_option_string(action)
         assert (
             value == action.const

@@ -18,7 +18,6 @@ import json
 import logging
 import uuid
 from copy import deepcopy
-from types import SimpleNamespace
 
 import numpy as np
 import pybase64

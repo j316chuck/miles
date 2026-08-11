@@ -186,6 +186,7 @@ def test_fsdp_actor_connects_engines_once_across_consecutive_windows(monkeypatch
     engines: list[object] = [object(), object()]
 
     monkeypatch.setattr(actor_module.dist, "barrier", lambda **_kwargs: None)
+    monkeypatch.setattr(actor_module.dist, "get_rank", lambda: 1)
     monkeypatch.setattr(actor_module, "get_gloo_group", lambda: object())
     monkeypatch.setattr(actor_module, "clear_memory", lambda: None)
 

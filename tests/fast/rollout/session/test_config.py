@@ -22,6 +22,9 @@ _ARGS_TO_CONFIG_FIELD = {
     "save_debug_trajectory_data": "save_debug_trajectory_data",
     "lora_rank": "lora_rank",
     "lora_adapter_path": "lora_adapter_path",
+    "use_session_server": "use_session_server",
+    "session_sample_picker_path": "session_sample_picker_path",
+    "session_sample_postprocessor_path": "session_sample_postprocessor_path",
 }
 
 _CALL_SITE_FIELDS = ("host", "port", "instance_id", "backend_url")
@@ -40,6 +43,9 @@ _DISTINCT_ARGS_VALUES = dict(
     save_debug_trajectory_data="/fake/traj",
     lora_rank=32,
     lora_adapter_path="/fake/adapters/x",
+    use_session_server="v2",
+    session_sample_picker_path="fake.picker",
+    session_sample_postprocessor_path="fake.postprocessor",
 )
 
 
@@ -92,6 +98,9 @@ _COMPLETE_CONFIG_KWARGS = dict(
     save_debug_trajectory_data=None,
     lora_rank=0,
     lora_adapter_path=None,
+    use_session_server=None,
+    session_sample_picker_path=None,
+    session_sample_postprocessor_path=None,
 )
 
 

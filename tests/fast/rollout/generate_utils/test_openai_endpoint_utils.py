@@ -289,7 +289,7 @@ async def test_create_selects_wire_fields_by_session_server_version(monkeypatch)
     monkeypatch.setattr("miles.rollout.generate_utils.openai_endpoint_utils.post", fake_post)
 
     def args(version):
-        return SimpleNamespace(session_server_ip="127.0.0.1", session_server_ports=[7000], use_session_server=version)
+        return SimpleNamespace(session_server_addrs=["127.0.0.1:7000"], use_session_server=version)
 
     assert (await OpenAIEndpointTracer.create(args(True))).samples_wire_fields == COMPUTED_FIELDS
     assert (await OpenAIEndpointTracer.create(args("v2"))).samples_wire_fields == COMPUTED_FIELDS_V2

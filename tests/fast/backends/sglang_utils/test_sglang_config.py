@@ -13,6 +13,7 @@ def _make_args(**overrides) -> Namespace:
         prefill_num_servers=None,
         rollout_num_gpus=8,
         rollout_num_gpus_per_engine=1,
+        eval_num_gpus=0,
         hf_checkpoint="/ckpt/actor",
         offload_rollout=False,
         debug_train_only=False,

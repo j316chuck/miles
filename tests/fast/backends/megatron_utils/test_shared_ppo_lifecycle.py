@@ -270,7 +270,7 @@ def _noop_timer(_name: str) -> Iterator[None]:
 def _patch_shared_train_helpers(actor_module: Any, monkeypatch: pytest.MonkeyPatch, fake_ray: _FakeRay) -> None:
     monkeypatch.setattr(actor_module, "ray", fake_ray)
     monkeypatch.setattr(actor_module, "all_replay_managers", [])
-    monkeypatch.setattr(actor_module, "get_data_iterator", lambda *_args, **_kwargs: (object(), 1))
+    monkeypatch.setattr(actor_module, "get_data_iterator", lambda *_args, **_kwargs: (object(), [1]))
     monkeypatch.setattr(actor_module, "compute_advantages_and_returns", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(actor_module, "train", lambda *_args, **_kwargs: TrainStepOutcome.NORMAL)
     monkeypatch.setattr(actor_module, "get_parallel_state", lambda: SimpleNamespace(is_pp_last_stage=True))
@@ -279,7 +279,7 @@ def _patch_shared_train_helpers(actor_module: Any, monkeypatch: pytest.MonkeyPat
 
 def _critic_worker(actor_module: Any) -> Any:
     worker = object.__new__(actor_module.MegatronTrainRayActor)
-    worker.args = Namespace(loss_type=None)
+    worker.args = Namespace(global_batch_size=1, loss_type=None)
     worker.role = "critic"
     worker.model = object()
     worker.optimizer = object()
@@ -294,6 +294,7 @@ def _actor_worker(actor_module: Any) -> Any:
         colocate=True,
         compute_advantages_and_returns=True,
         get_mismatch_metrics=False,
+        global_batch_size=1,
         keep_old_actor=False,
         ref_update_interval=None,
         use_critic=True,

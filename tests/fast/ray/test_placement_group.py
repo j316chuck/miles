@@ -56,6 +56,7 @@ def fake_components():
     controller_cls = MagicMock(name="InferenceController", side_effect=construct_controller)
 
     executor_handle = MagicMock(name="rollout_executor")
+    executor_handle.set_eval_fleet.remote = AsyncMock()
     executor_cls = _FakeExecutorClass(executor_handle)
 
     with patch("miles.ray.placement_group.InferenceController", controller_cls), patch(
@@ -138,6 +139,7 @@ class TestCreatePlacementGroups:
             critic_num_nodes=1,
             critic_num_gpus_per_node=1,
             rollout_num_gpus=3,
+            eval_num_gpus=0,
         )
         defaults.update(overrides)
         return Namespace(**defaults)

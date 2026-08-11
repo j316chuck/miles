@@ -168,6 +168,27 @@ class TestUpdateWeightUnderTheEngineLock:
         assert len(named_tensors) == 1
         pbar.update.assert_not_called()
 
+    def test_a_broadcast_failure_keeps_the_lock_and_the_bucket(self) -> None:
+        """A source that fails before returning futures must retain its ticket and bucket."""
+        store = HashStore()
+        fake_self = self._make_self(store)
+        named_tensors = [("w", torch.zeros(2))]
+        pbar = MagicMock()
+
+        with pytest.raises(RuntimeError, match="broadcast failed"):
+            self._run(
+                fake_self,
+                named_tensors,
+                pbar=pbar,
+                broadcast_side_effect=RuntimeError("broadcast failed"),
+            )
+
+        assert store.add(_SERVING_KEY, 0) == 0
+        assert len(named_tensors) == 1
+        pbar.update.assert_not_called()
+        with pytest.raises(AssertionError):
+            self._run(fake_self, named_tensors)
+
     def test_a_source_that_failed_once_refuses_to_broadcast_again(self) -> None:
         """The retained ticket must block this rank too, not just the ranks behind it."""
         store = HashStore()

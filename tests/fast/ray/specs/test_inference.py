@@ -115,7 +115,7 @@ class TestComputeSpecSessionServer:
     def test_launch_command_wires_the_router_backend_and_roundtrips(self):
         """The session server command targets the router addr from spec_addrs and its config parses back losslessly."""
         args = make_args(
-            use_session_server=True,
+            use_session_server="v1",
             hf_checkpoint="/fake/model",
             num_session_servers=2,
             sglang_router_ip=None,

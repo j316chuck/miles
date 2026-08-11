@@ -247,6 +247,7 @@ def _serve_session(*, backend_url: str, hf_checkpoint: str, version: str) -> Ite
         session_server_instance_ids={session_addr: instance_id},
         save_debug_trajectory_data=None,
         custom_agent_function_path="miles.utils.test_utils.session_verify_agent.run_agent",
+        partial_rollout=False,
         max_seq_len=None,
         session_verify_cycles=1,
         tool_call_failure_mode="rollback",

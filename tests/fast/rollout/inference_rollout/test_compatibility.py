@@ -312,6 +312,7 @@ class TestShippedRolloutFunctions:
         [
             "miles.rollout.inference_rollout.inference_rollout_common.InferenceRolloutFn",
             "miles.rollout.fully_async_rollout.FullyAsyncRolloutFn",
+            "examples.fully_async.external_eval_fn.ExternalSglangEvalFn",
         ],
     )
     def test_a_shipped_rollout_function_passes_the_loader_class_check(

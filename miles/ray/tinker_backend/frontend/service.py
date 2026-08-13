@@ -87,6 +87,13 @@ class TinkerFrontend:
         self.samplers = SamplingSessionStore()
         self._http: httpx.AsyncClient | None = None
         self._sample_tasks: set[asyncio.Task] = set()
+        args = backend.args
+        # Match the outbound client to the router's advertised queue.  The
+        # httpx defaults allow only 100 concurrent connections and wait just
+        # 10 seconds for a slot, which turns a healthy multi-tenant eval burst
+        # into an opaque PoolTimeout before the router sees the request.
+        self._router_max_connections = max(100, int(getattr(args, "router_queue_size", 100)))
+        self._router_pool_timeout_s = float(getattr(args, "router_queue_timeout_secs", 600.0))
 
     async def close(self) -> None:
         for task in list(self._sample_tasks):
@@ -549,7 +556,8 @@ class TinkerFrontend:
             sequences = [translation.generation_to_sequence(generation) for generation in generations]
             record.resolve(translation.sequences_to_sample_response(sequences))
         except Exception as exc:  # noqa: BLE001 — every failure must resolve the future
-            record.resolve(wire.terminal_failure(f"sampling failed: {exc}", "server"))
+            logger.exception("sampling failed for request_id=%s: %r", record.request_id, exc)
+            record.resolve(wire.terminal_failure(f"sampling failed: {type(exc).__name__}: {exc}", "server"))
 
     def _sampler_still_live(self, sampler: SamplingSessionRecord) -> bool:
         live = self.backend.registry.find(sampler.name)
@@ -561,7 +569,18 @@ class TinkerFrontend:
 
     async def _post_generate(self, payload: dict) -> dict:
         if self._http is None:
-            self._http = httpx.AsyncClient(timeout=httpx.Timeout(10.0, read=600.0, write=60.0))
+            self._http = httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    10.0,
+                    read=600.0,
+                    write=60.0,
+                    pool=self._router_pool_timeout_s,
+                ),
+                limits=httpx.Limits(
+                    max_connections=self._router_max_connections,
+                    max_keepalive_connections=min(self._router_max_connections, 256),
+                ),
+            )
         response = await self._http.post(f"{self.backend.router_url}/generate", json=payload)
         response.raise_for_status()
         return response.json()

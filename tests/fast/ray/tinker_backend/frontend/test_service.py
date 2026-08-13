@@ -445,6 +445,43 @@ class TestSampling:
 
         run(scenario)
 
+    def test_router_client_capacity_tracks_router_queue(self, monkeypatch):
+        captured = {}
+
+        class Response:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"ok": True}
+
+        class Client:
+            def __init__(self, *, timeout, limits):
+                captured["timeout"] = timeout
+                captured["limits"] = limits
+
+            async def post(self, _url, json):
+                captured["payload"] = json
+                return Response()
+
+            async def aclose(self):
+                return None
+
+        monkeypatch.setattr("miles.ray.tinker_backend.frontend.service.httpx.AsyncClient", Client)
+
+        async def scenario():
+            backend = make_backend(router_queue_size=512, router_queue_timeout_secs=321)
+            frontend = TinkerFrontend(backend)
+            try:
+                assert await frontend._post_generate({"input_ids": [1]}) == {"ok": True}
+                assert captured["limits"].max_connections == 512
+                assert captured["limits"].max_keepalive_connections == 256
+                assert captured["timeout"].pool == 321
+            finally:
+                await frontend.close()
+
+        asyncio.run(scenario())
+
 
 class TestReplayExpiry:
     """Delivered-then-evicted results must answer with a typed 410 tombstone:

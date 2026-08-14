@@ -48,6 +48,8 @@ class ScriptArgs(U.ExecuteTrainConfig):
     rollout_batch_size: int = 32
     n_samples_per_prompt: int = 1
     global_batch_size: int = 32
+    use_dynamic_batch_size: bool = True
+    max_tokens_per_gpu: int = 9216
 
     api_port: int = 8068
     enable_wandb: bool = False
@@ -56,6 +58,17 @@ class ScriptArgs(U.ExecuteTrainConfig):
     def __post_init__(self):
         if self.hf_checkpoint is None:
             self.hf_checkpoint = f"{self.model_dir}/Qwen3-4B"
+
+
+def _perf_args(args: ScriptArgs) -> str:
+    perf_args = (
+        f"--tensor-model-parallel-size {args.tp} --sequence-parallel "
+        "--pipeline-model-parallel-size 1 --context-parallel-size 1 "
+        "--expert-model-parallel-size 1 --expert-tensor-parallel-size 1 "
+    )
+    if args.use_dynamic_batch_size:
+        return perf_args + f"--use-dynamic-batch-size --max-tokens-per-gpu {args.max_tokens_per_gpu} "
+    return perf_args + "--micro-batch-size 1 "
 
 
 @app.command()
@@ -95,12 +108,7 @@ def _serve(args: ScriptArgs, service: bool):
 
     optimizer_args = "--optimizer adam --lr 1e-4 --lr-decay-style constant "
 
-    perf_args = (
-        f"--tensor-model-parallel-size {args.tp} --sequence-parallel "
-        "--pipeline-model-parallel-size 1 --context-parallel-size 1 "
-        "--expert-model-parallel-size 1 --expert-tensor-parallel-size 1 "
-        "--use-dynamic-batch-size --max-tokens-per-gpu 9216 "
-    )
+    perf_args = _perf_args(args)
 
     sglang_args = "--rollout-num-gpus-per-engine 1 --sglang-mem-fraction-static 0.8 "
     topology_args = (

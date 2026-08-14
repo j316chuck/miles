@@ -7,6 +7,18 @@ from argparse import Namespace
 import torch
 
 
+def _skip_untrained_mtp_adapter(args: Namespace, name: str | None, prefix: str | None) -> bool:
+    """Keep auxiliary MTP layers frozen unless MTP training was explicitly enabled.
+
+    Some checkpoints, including Qwen3.5, advertise an MTP block even during
+    ordinary language-model training.  Attaching LoRA to that block is both
+    unnecessary (it receives no MTP loss) and cannot be exported to rollout
+    engines by Megatron Bridge's PEFT converter.
+    """
+    full_name = f"{prefix}.{name}" if prefix else name or ""
+    return not getattr(args, "enable_mtp_training", False) and "mtp" in full_name.split(".")
+
+
 def create_multi_lora_instance(args: Namespace):
     """Create a MultiLoRA instance from training args."""
     from megatron.bridge.peft.multi_lora import MultiLoRA
@@ -23,8 +35,14 @@ def create_multi_lora_instance(args: Namespace):
 
         lora_cls = LoRA
 
+    class TrainingAwareMultiLoRA(MultiLoRA):
+        def transform(self, module, name=None, prefix=None):
+            if _skip_untrained_mtp_adapter(args, name, prefix):
+                return module
+            return super().transform(module, name=name, prefix=prefix)
+
     # exclude_modules was already folded into target_modules during arg validation.
-    return MultiLoRA(
+    return TrainingAwareMultiLoRA(
         target_modules=convert_target_modules_to_megatron(args.target_modules, lora_type=lora_cls),
         n_adapters=args.multi_lora_n_adapters,
         dim=args.lora_rank,

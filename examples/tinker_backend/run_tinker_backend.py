@@ -68,7 +68,7 @@ def _perf_args(args: ScriptArgs) -> str:
     )
     if args.use_dynamic_batch_size:
         return perf_args + f"--use-dynamic-batch-size --max-tokens-per-gpu {args.max_tokens_per_gpu} "
-    return perf_args + "--micro-batch-size 1 "
+    return perf_args + "--micro-batch-size 1 --qkv-format bshd "
 
 
 @app.command()

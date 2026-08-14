@@ -19,3 +19,4 @@ def test_fixed_batching_avoids_packed_sequences() -> None:
     assert "--use-dynamic-batch-size" not in perf_args
     assert "--max-tokens-per-gpu" not in perf_args
     assert "--micro-batch-size 1" in perf_args
+    assert "--qkv-format bshd" in perf_args

@@ -5,6 +5,7 @@ import random
 import shutil
 from argparse import Namespace
 from contextlib import ExitStack, nullcontext
+from dataclasses import replace as dataclass_replace
 from typing import TYPE_CHECKING
 
 import ray
@@ -794,6 +795,13 @@ class MegatronTrainRayActor(TrainRayActor):
 
                 self._multi_lora_pending_push.clear()
                 commit_weight_push(version_update_names, self._is_first_replica_megatron_main_rank)
+                # Keep every training rank's resident view aligned with the
+                # registry after a successful immutable publish. Future
+                # publishes derive their alias from this version.
+                for name in version_update_names:
+                    adapter = self.loaded_adapters.get(name)
+                    if adapter is not None:
+                        self.loaded_adapters[name] = dataclass_replace(adapter, version=adapter.version + 1)
 
             if self.args.ci_test and len(rollout_engines) > 0 and not is_lora_enabled(self.args):
                 engine = random.choice(rollout_engines)

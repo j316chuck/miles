@@ -406,7 +406,16 @@ def select_adapters_to_push(loaded_adapters: dict, pending_push: set, has_new_en
     only explicit publishes bump serving)."""
     pending = pending_push & set(loaded_adapters)
     push_names = set(loaded_adapters) if has_new_engines else pending
-    return {name: loaded_adapters[name] for name in sorted(push_names)}, sorted(pending)
+    # An explicit publish creates a fresh immutable engine alias. The actor
+    # advances its local view only after the transfer succeeds, so the alias
+    # here and the frontend's completed sampler identity agree.
+    pending_names = sorted(pending)
+    return {
+        name: dataclass_replace(loaded_adapters[name], version=loaded_adapters[name].version + 1)
+        if name in pending
+        else loaded_adapters[name]
+        for name in sorted(push_names)
+    }, pending_names
 
 
 def commit_weight_push(version_update_names: list, is_main_rank: bool) -> None:

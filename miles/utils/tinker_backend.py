@@ -126,10 +126,16 @@ def parse_adapter(rid: str) -> str:
     return rid.split(RID_SEPARATOR, 1)[0]
 
 
-def serving_lora_name(adapter_name: str, registration_id: str) -> str:
-    """Engine-side LoRA name for one registration; pushes and every inference
-    request must agree on it, and a re-registered name is a new tenant."""
-    return f"__miles_adapter_{adapter_name}_{registration_id}"
+def serving_lora_name(adapter_name: str, registration_id: str, serving_version: int) -> str:
+    """Immutable engine-side LoRA name for one published adapter revision.
+
+    A sampling client is a snapshot: an adapter publish must therefore load a
+    new alias instead of overwriting the alias captured by an older client.
+    The registration id prevents ABA across re-registration; the version
+    prevents a post-publish request from observing different weights under the
+    same identity.
+    """
+    return f"__miles_adapter_{adapter_name}_{registration_id}_v{serving_version}"
 
 
 def cache_extra_key(adapter_name: str, registration_id: str, serving_version: int) -> str:

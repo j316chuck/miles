@@ -42,7 +42,7 @@ class AdapterRun:
         never aliases the previous tenant's served weights (anti-ABA)."""
         from miles.utils.tinker_backend import serving_lora_name
 
-        return serving_lora_name(self.name, self.registration_id)
+        return serving_lora_name(self.name, self.registration_id, self.version)
 
 
 def parse_adapter_run_yaml(path: Path) -> AdapterRunConfig:

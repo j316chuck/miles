@@ -269,7 +269,7 @@ def phase_a(ops: Ops) -> None:
     result = view.get("result") or {}
     serving_version = result.get("serving_version")
     serving_name = result.get("serving_name")
-    expected_name = serving_lora_name(NAME, registration_id)
+    expected_name = serving_lora_name(NAME, registration_id, 1)
     ok = view["state"] == "SUCCEEDED" and serving_version == 1 and serving_name == expected_name
     report(
         "phase4-save_weights_for_sampler",

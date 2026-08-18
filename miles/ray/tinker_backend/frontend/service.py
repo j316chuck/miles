@@ -567,15 +567,6 @@ class TinkerFrontend:
                         wire.terminal_failure("sampler weights are no longer live (registration retired)", "user")
                     )
                     return
-                if live["serving_version"] != sampler.serving_version:
-                    record.resolve(
-                        wire.terminal_failure(
-                            "stale ephemeral sampler: the model was republished and this backend serves the "
-                            "latest weights only — create a new sampling client after each publish",
-                            "user",
-                        )
-                    )
-                    return
                 payload["lora_path"] = sampler.serving_name
                 payload["extra_key"] = cache_extra_key(sampler.name, sampler.registration_id, sampler.serving_version)
 
@@ -604,17 +595,12 @@ class TinkerFrontend:
                 await asyncio.gather(*generation_tasks, return_exceptions=True)
                 raise
             if sampler.name is not None and not self._sampler_still_live(sampler):
-                # Re-checked AFTER generation: a republish that landed while
-                # the request was in flight swapped the engine-side weights
-                # under the same serving name (latest-only serving), so the
-                # output cannot be attributed to the pinned version. Fail loud
-                # rather than return cross-version samples. (A publish
-                # committing between this check and delivery remains possible
-                # — the serving identity is versioned, not leased; see README.)
+                # A registration may retire while a request is in flight. A
+                # republish is safe: ``serving_name`` is versioned and remains
+                # immutable for the sampler session that captured it.
                 record.resolve(
                     wire.terminal_failure(
-                        "the model was republished while this sample was in flight; create a new sampling "
-                        "client after each publish and resample",
+                        "sampler weights are no longer live (registration retired)",
                         "user",
                     )
                 )
@@ -634,7 +620,6 @@ class TinkerFrontend:
         return (
             live is not None
             and live["registration_id"] == sampler.registration_id
-            and live["serving_version"] == sampler.serving_version
         )
 
     # ---------------- future retrieval ----------------
@@ -744,7 +729,8 @@ class TinkerFrontend:
                     base_model=model.base_model,
                     name=model.name,
                     registration_id=model.registration_id,
-                    serving_name=result.get("serving_name") or serving_lora_name(model.name, model.registration_id),
+                    serving_name=result.get("serving_name")
+                    or serving_lora_name(model.name, model.registration_id, int(result["serving_version"])),
                     serving_version=result.get("serving_version"),
                 )
             )

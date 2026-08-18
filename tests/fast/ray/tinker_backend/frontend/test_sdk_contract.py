@@ -296,7 +296,7 @@ class TestSampling:
         assert response.sequences[0].tokens == [1000, 1001]
         assert "lora_path" not in stack.router.requests[-1]
 
-    def test_stale_ephemeral_sampler_fails_loud_after_republish(self, service_client):
+    def test_sampler_remains_a_snapshot_after_republish(self, service_client):
         client = service_client.create_lora_training_client(base_model=BASE, rank=8)
         old = client.save_weights_and_get_sampling_client()
         client.save_weights_and_get_sampling_client()  # republish supersedes
@@ -305,8 +305,7 @@ class TestSampling:
             num_samples=1,
             sampling_params=types.SamplingParams(max_tokens=2),
         )
-        with pytest.raises(tinker.RequestFailedError, match="republished"):
-            future.result()
+        assert future.result().sequences[0].tokens == [1000, 1001]
 
 
 class TestUnload:

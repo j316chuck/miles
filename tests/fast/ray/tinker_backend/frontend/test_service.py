@@ -405,21 +405,25 @@ class TestSampling:
 
         run(scenario)
 
-    def test_republish_makes_the_old_session_fail_loud(self):
+    def test_republish_keeps_the_old_session_on_its_pinned_alias(self):
         async def scenario(stack):
             model_id = await stack.create_model()
             old = await self.publish(stack, model_id, seq_id=1, sampling_session_seq_id=0)
-            await self.publish(stack, model_id, seq_id=2, sampling_session_seq_id=1)
+            new = await self.publish(stack, model_id, seq_id=2, sampling_session_seq_id=1)
             future = stack.frontend.sample(self.sample_request(old))
             body = await stack.retrieve(future["request_id"])
-            assert body["category"] == "user" and "republished" in body["error"]
+            assert body["type"] == "sample"
+            old_name = stack.router.requests[-1]["lora_path"]
+            future = stack.frontend.sample(self.sample_request(new))
+            assert (await stack.retrieve(future["request_id"]))["type"] == "sample"
+            assert old_name != stack.router.requests[-1]["lora_path"]
 
         run(scenario)
 
-    def test_republish_mid_generation_fails_the_inflight_sample(self):
-        # TOCTOU fence: the pre-dispatch version check alone would let a
-        # sample straddling a republish resolve as if it came from the pinned
-        # version; the post-generation re-check fails it loudly.
+    def test_republish_mid_generation_keeps_the_inflight_sample_on_its_alias(self):
+        # The captured version is an immutable SGLang alias, so a republish
+        # during generation cannot change the weights attributed to this
+        # sampler response.
         async def scenario(stack):
             model_id = await stack.create_model()
             sampler_id = await self.publish(stack, model_id, seq_id=1, sampling_session_seq_id=0)
@@ -439,7 +443,7 @@ class TestSampling:
             stack.frontend.backend.registry.record_weight_update([name])  # republish lands mid-flight
             gate.set()
             body = await stack.retrieve(future["request_id"])
-            assert body["category"] == "user" and "republished while this sample was in flight" in body["error"]
+            assert body["type"] == "sample"
 
         run(scenario)
 

@@ -397,7 +397,9 @@ class TinkerBackend:
                     result = {
                         **(result or {}),
                         "serving_version": record.serving_version if record else None,
-                        "serving_name": serving_lora_name(operation["name"], operation["registration_id"]),
+                        "serving_name": serving_lora_name(
+                            operation["name"], operation["registration_id"], record.serving_version
+                        ),
                     }
                 self.operations.complete(operation_id, result)
                 key = (operation["name"], operation["registration_id"])

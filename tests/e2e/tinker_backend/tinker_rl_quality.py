@@ -205,7 +205,7 @@ def adapter_loop(run: AdapterRun, ops: Ops, router: str, dataset: list[dict], gr
     run.registration_id = info["registration_id"]
     from miles.utils.tinker_backend import serving_lora_name  # noqa: PLC0415
 
-    run.serving_name = serving_lora_name(name, run.registration_id)
+    run.serving_name = serving_lora_name(name, run.registration_id, 1)
     log(
         f"({name}) registered: slot={reg.get('slot')} rank={spec['rank']} lr={spec['lr']} rid={run.registration_id[:8]}"
     )
